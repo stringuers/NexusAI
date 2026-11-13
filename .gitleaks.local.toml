@@ -1,0 +1,5 @@
+[extend]
+useDefault = true
+[[allowlists]]
+description = "Local private configuration, installed dependencies and generated test outputs"
+paths = ['''(^|/)\.env($|\.)''', '''(^|/)node_modules/''', '''(^|/)\.venv/''', '''(^|/)\.data/''', '''(^|/)\.next/''', '''(^|/)\.next-dev/''', '''(^|/)test-results/''', '''(^|/)\.git/''']

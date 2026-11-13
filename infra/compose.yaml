@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: nexus
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  migrate:
+    profiles: [app]
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    image: nexus-api:local
+    env_file: ../.env.nexus.local
+    environment:
+      DATABASE_URL: postgresql+asyncpg://nexus:local-development-only@postgres:5432/nexus
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    read_only: true
+    tmpfs: [/tmp]
+  api:
+    profiles: [app]
+    image: nexus-api:local
+    env_file: ../.env.nexus.local
+    environment:
+      DATABASE_URL: postgresql+asyncpg://nexus:local-development-only@postgres:5432/nexus
+      NEXUS_ARTIFACT_ROOT: /data/artifacts
+    ports: ["127.0.0.1:8111:8000"]
+    volumes: ["../.data/artifacts:/data/artifacts:ro"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs: [/tmp]
+  web:
+    profiles: [app]
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+    environment:
+      NEXUS_API_URL: http://api:8000
+    ports: ["127.0.0.1:3102:3000"]
+    depends_on: [api]
+    read_only: true
+    tmpfs: [/tmp]
+  egress:
+    image: ubuntu/squid:6.10-24.10_edge
+    container_name: nexus-egress
+    volumes:
+      - ./docker/squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      - sandbox
+      - egress
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  postgres_data:
+networks:
+  sandbox:
+    name: nexus-sandbox
+    internal: true
+  egress:

@@ -1,0 +1,13 @@
+{
+  "name": "NEXUS — Authenticated task intake",
+  "active": false,
+  "nodes": [
+    {"id":"intake","name":"Authenticated intake","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[0,0],"parameters":{"path":"nexus-task","httpMethod":"POST","authentication":"headerAuth","responseMode":"lastNode"}},
+    {"id":"validate","name":"Validate intake","type":"n8n-nodes-base.code","typeVersion":2,"position":[240,0],"parameters":{"jsCode":"const body = $json.body; if (!body || typeof body.event_id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(body.event_id) || typeof body.project_id !== 'string' || typeof body.instruction !== 'string' || !body.instruction.trim() || body.instruction.length > 20000) throw new Error('Invalid NEXUS intake'); return [{json:{event_id:body.event_id,task:{project_id:body.project_id,instruction:body.instruction,budget_microusd:body.budget_microusd ?? 5000000}}}];"}},
+    {"id":"submit","name":"Submit persisted task","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[480,0],"parameters":{"method":"POST","url":"={{ $vars.NEXUS_API_URL + '/api/v1/tasks' }}","authentication":"genericCredentialType","genericAuthType":"httpHeaderAuth","sendHeaders":true,"headerParameters":{"parameters":[{"name":"Idempotency-Key","value":"={{ 'n8n:' + $json.event_id }}"}]},"sendBody":true,"specifyBody":"json","jsonBody":"={{ JSON.stringify($json.task) }}","options":{"timeout":15000}}}
+  ],
+  "connections":{"Authenticated intake":{"main":[[{"node":"Validate intake","type":"main","index":0}]]},"Validate intake":{"main":[[{"node":"Submit persisted task","type":"main","index":0}]]}},
+  "settings":{"executionOrder":"v1"},
+  "pinData":{},
+  "tags":[]
+}

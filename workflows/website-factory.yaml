@@ -1,0 +1,15 @@
+id: website-factory
+version: 0.1.0
+status: partial-static-site-slice
+orchestrator: langgraph
+stages:
+  - planning
+  - optional_parallel_research_and_design
+  - implementation
+  - static_html_validation
+  - independent_codex_review
+  - bounded_repair
+  - authenticated_artifact_approval
+  - verified_archive_delivery
+repair_limit: 2
+notes: Browser QA, preview deployment, external research and Hermes learning are not yet integrated.
